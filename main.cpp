@@ -1,3 +1,5 @@
+#define DEBUG
+
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -5,6 +7,8 @@
 #include <sstream>
 #include <utility>
 #include <cstdio>
+#include <tuple>
+#include <regex>
 
 using namespace std;
 using VEC = vector<int>;
@@ -15,14 +19,23 @@ STATE banker(STATE state, VEC request, int pid);
 bool safety(STATE state);
 void dump(STATE state);
 void print_mat_formatted(MAT mat, string name);
+bool operator>(const vector<int>& v1, const vector<int>& v2);
+vector<int> operator+(const vector<int>& vec1, const vector<int>& vec2);
+vector<int> operator-(const vector<int>& vec1, const vector<int>& vec2);
+bool operator<=(const vector<int>& vec1, const vector<int>& vec2);
 
 int main() 
 {
     // Get input
     string file_name = "input.txt";
     ifstream file(file_name);
+    if (!file.is_open()) {
+        cerr << "File not found... terminating";
+        return 1;
+    }
     int n, m;
     file >> n >> m;
+
     // Read n x m MAX vector
     MAT max(n, VEC(m, 0));
     for (int i = 0; i < n; i++) 
@@ -40,32 +53,75 @@ int main()
 
     STATE state = {max, avail, alloc, need};
 
+    cout << "Enter negative process ID to exit program\n";
+
     while(1)
     {
-        // Get request from user
+        // Get pid from user
+        bool valid = false;
+        string input;
         int pid;
-        cout << "What process? ";
-        cin >> pid;
+        while(!valid) {
+            cout << "What process? ";
+            cin >> input;
+
+            // Check that pid is an int
+            regex integer ("-?\\d+");
+            if (!regex_match(input, integer)) {
+                cout << "Process ID must be an integer\n";
+                continue;
+            }
+            pid = stoi(input);
+            //Ensure pid is within the number of processes
+            if (pid >= n) {
+                cout << "Process ID must be between 0 and " << n-1 << "\n";
+                continue;
+            }
+        
+            valid = true;
+        }
+
         // Exit on negative pid
         if (pid < 0) {
             dump(state);
             break;
         }
-        VEC request;
-        cout << "Request vector? ";
-        string tmp;
-        int itmp;
-        getline(cin, tmp);
-        stringstream ss(tmp);
-        for (int j = 0; j < m; j++) {
-            ss >> tmp;
-            request[j] = stoi(tmp);
+
+        // Get request vector from user
+        cin.ignore(); // need to clear buffer for getline
+        VEC request (m, 0);
+        valid = false;
+        while(!valid) {
+          get_request:
+            cout << "Request vector? ";
+            string tmp; // Will store the individual values
+            getline(cin, tmp);
+            stringstream ss(tmp);
+            for (int j = 0; j < m; j++) {
+                tmp = "";
+                ss >> tmp;
+
+                // Check validity
+                if (tmp == "") {
+                    cout << "Request needs " << m << " values\n";
+                    goto get_request;
+                }
+                regex positive ("\\d+");
+                if (!regex_match(tmp, positive)) {
+                    cout << "All values in request must be positive integers\n";
+                    goto get_request;
+                }
+
+                request[j] = stoi(tmp);
+            }
+            valid = true;
         }
 
         // Run banker's algorithm
         state = banker(state, request, pid);
 
         // Dump all vectors
+        cout << "\n";
         dump(state);
     }
 }
@@ -148,7 +204,6 @@ void dump(STATE state) {
     MAT max, alloc, need;
     VEC avail;
     tie(max, avail, alloc, need) = state;
-    int n = max.size();
     int m = max[0].size();
 
     // Print max
@@ -158,23 +213,26 @@ void dump(STATE state) {
 
     // Print avail
     cout << "--- AVAILABLE ---\n";
-    cout << "R -> ";
-    for (int j = 0; j < m; j++)
-        printf("%2d ", m);
+    cout << "R   -> ";
+    for (int j = 0; j < m; j++) // list resource indices
+        printf("%2d ", j);
+    cout << "\n        ";
+    for (int j = 0; j < m; j++) // space out resources and processes
+        cout << "|  ";
     cout << "\n";
-    cout << "     "; // to match R -> 
-    for (int j = 0; j < m; j++)
-        printf("%2d ", avail[m]);
+    cout << "P   -> "; 
+    for (int j = 0; j < m; j++) // list resource quantities
+        printf("%2d ", avail[j]);
 
-    cout << "\n";
+    cout << "\n\n";
 
     // Print alloc
-    print_mat_formatted(max, string("ALLOCATED"));
+    print_mat_formatted(alloc, string("ALLOCATED"));
 
     cout << "\n";
 
     // Print need
-    print_mat_formatted(max, string("NEED"));
+    print_mat_formatted(need, string("NEED"));
 
     cout << "\n";
 
@@ -187,12 +245,15 @@ void print_mat_formatted(MAT mat, string name) {
     int m = mat[0].size();
 
     cout << "--- " << name << " ---\n";
-    cout << "R -> ";
-    for (int j = 0; j < m; j++)
-        printf("%2d ", m);
+    cout << "R   -> ";
+    for (int j = 0; j < m; j++) // list resource indices
+        printf("%2d ", j);
+    cout << "\n        ";
+    for (int j = 0; j < m; j++) // space resources and processes
+        cout << "|  ";
     cout << "\n";
     for (int i = 0; i < n; i++) {
-        cout << "P%d -> ", n;
+        printf("P%2d -> ", i);
         for (int j = 0; j < m; j++) {
             printf("%2d ", mat[i][j]);
         }
@@ -201,22 +262,23 @@ void print_mat_formatted(MAT mat, string name) {
 }
 
 
-// vec1 < iff vec1[i] < vec2[i] for all i = 1 to size
-bool operator<(const vector<int>& vec1, const vector<int>& vec2) {
-    // Check that both vectors have the same size
-    if (vec1.size() != vec2.size()) {
-        return false;  // We can decide that vectors of different sizes should return false
-    }
-
-    // Compare elements one by one
-    for (size_t i = 0; i < vec1.size(); ++i) {
-        if (vec1[i] >= vec2[i]) {
-            return false; // If any element of vec1 is not strictly less than vec2, return false
+// vec1 > iff vec1[i] > vec2[i] for all i = 1 to size
+bool operator>(const vector<int>& v1, const vector<int>& v2) {
+    // Compare the vectors lexicographically
+    int n = min(v1.size(), v2.size());
+    
+    for (int i = 0; i < n; ++i) {
+        if (v1[i] > v2[i]) {
+            return true;
+        } else if (v1[i] < v2[i]) {
+            return false;
         }
     }
-
-    return true; // If all elements of vec1 are strictly less than vec2, return true
+    
+    // If all compared elements are equal, the larger vector (in size) is considered "greater"
+    return v1.size() > v2.size();
 }
+
 
 // vec1[i] + vec2[i] for all i from 1 to size
 vector<int> operator+(const vector<int>& vec1, const vector<int>& vec2) {

@@ -10,7 +10,7 @@ all: $(FILE_1)
 
 # Rule to build file_1 executable
 $(FILE_1): $(FILE_1).cpp
-	$(CXX) $(CXXFLAGS) $(FILE_1).cpp -o $(FILE_1) -lncurses
+	$(CXX) $(CXXFLAGS) $(FILE_1).cpp -o $(FILE_1)
 
 # Clean up generated files
 clean:

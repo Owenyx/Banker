@@ -1,3 +1,8 @@
+Current issues:
+Avail is 0 0 0
+Maybe get rid of unused vec operators
+
+
 one file contains
 N M
 N row M column matrix of MAX
