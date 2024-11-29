@@ -19,7 +19,6 @@ STATE banker(STATE state, VEC request, int pid);
 bool safety(STATE state);
 void dump(STATE state);
 void print_mat_formatted(MAT mat, string name);
-bool operator>(const vector<int>& v1, const vector<int>& v2);
 vector<int> operator+(const vector<int>& vec1, const vector<int>& vec2);
 vector<int> operator-(const vector<int>& vec1, const vector<int>& vec2);
 bool operator<=(const vector<int>& vec1, const vector<int>& vec2);
@@ -134,12 +133,12 @@ STATE banker(STATE state, VEC request, int pid) {
     tie(max, avail, alloc, need) = state;
 
     // Check request validity
-    if (request > need[pid]) {
+    if (!(request <= need[pid])) {
         cout << "Request denied - Exceeded maximum claim\n";
         return state;
     }
 
-    if (request > avail) {
+    if (!(request <= avail)) {
         cout << "Request denied - Not enough available resources\n";
         return state;
     }
@@ -259,24 +258,6 @@ void print_mat_formatted(MAT mat, string name) {
         }
         cout << "\n";
     }
-}
-
-
-// vec1 > iff vec1[i] > vec2[i] for all i = 1 to size
-bool operator>(const vector<int>& v1, const vector<int>& v2) {
-    // Compare the vectors lexicographically
-    int n = min(v1.size(), v2.size());
-    
-    for (int i = 0; i < n; ++i) {
-        if (v1[i] > v2[i]) {
-            return true;
-        } else if (v1[i] < v2[i]) {
-            return false;
-        }
-    }
-    
-    // If all compared elements are equal, the larger vector (in size) is considered "greater"
-    return v1.size() > v2.size();
 }
 
 
