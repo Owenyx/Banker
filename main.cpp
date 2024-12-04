@@ -123,7 +123,8 @@ int main()
     }
 }
 
-
+// Takes a state, request, and pid, and either denies the request, diplaying an error message and returing the unchanged state, 
+// or grants the request, displaying a success message and returning the state with the request fulfilled.
 STATE banker(STATE state, VEC request, int pid) {
     // Unpack tuple
     MAT max, alloc, need;
@@ -159,7 +160,7 @@ STATE banker(STATE state, VEC request, int pid) {
     return state;
 }
 
-
+// Performs the safety algorithm on a given state
 bool safety(STATE state) {
     // Unpack tuple
     MAT max, alloc, need;
@@ -195,7 +196,7 @@ bool safety(STATE state) {
     return all_good;
 }
 
-
+// Dumps MAX, AVAIL, ALLOC, and NEED in that order
 void dump(STATE state) {
     // Unpack tuple
     MAT max, alloc, need;
