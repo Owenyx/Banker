@@ -29,3 +29,5 @@ To run the program in Ubuntu, navigate to the directory containing the program a
     ./main
 Then just follow the program's instructions and the steps detailed in the overview.
 input.txt must be present in the same directory for the program to work.
+
+To terminate the program, enter a negative process value when prompted "What process?"
